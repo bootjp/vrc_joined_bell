@@ -3,7 +3,7 @@ import time
 import glob
 import os
 import re
-import pygame
+import pyglet
 import yaml
 
 
@@ -28,9 +28,9 @@ def is_silent_time(start, end):
 
 
 def play(data_path, volume):
-    pygame.mixer.init()
-    player = pygame.mixer.Sound(data_path)
-    player.set_volume(volume)
+    player = pyglet.media.Player()
+    player.queue(data_path)
+    player.volume = volume
     player.play()
 
 
