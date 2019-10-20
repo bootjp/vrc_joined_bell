@@ -28,6 +28,7 @@ def is_silent_time(start, end):
 
 
 def play(data_path, volume):
+    pyglet.options['audio'] = 'directsound'
     player = pyglet.media.Player()
     player.queue(data_path)
     player.volume = volume
