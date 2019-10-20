@@ -28,6 +28,7 @@ def is_silent_time(start, end):
 
 
 def play(data_path, volume):
+    pygame.init()
     pygame.mixer.init()
     player = pygame.mixer.Sound(data_path)
     player.set_volume(volume)
