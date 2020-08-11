@@ -17,6 +17,13 @@ notices:
   - event: '.*?\[NetworkManager\] OnPlayerLeft (.*)'
     sound: 'playerLeft.wav'
     message: 'さんが退出しました'
+  - event: '.*?\[RoomManager\] Entering Room:(.*)'
+    message: 'にジョインしました'
+  - event: '[VRCFlowManagerVRC] I am MASTER'
+    message: 'インスタンスマスターになりました'
+  - event: 'Took screenshot to: '
+    message: '撮影しました'
+
 
 # CeVIOを使う場合に記述
 # cevio:
