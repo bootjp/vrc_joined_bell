@@ -212,32 +212,35 @@ if __name__ == "__main__":
             logtime = timereg.match(line)
             if not logtime:
                 continue
+
             for pattern, item in data.items():
                 match = item[COLUMN_EVENT_PATTERN].match(line)
-                if match and logtime.group(1) != item[COLUMN_TIME]:
-                    print(line)
-                    item[COLUMN_TIME] = logtime.group(1)
-                    group = re.sub(r"[-―]", "", match.group(1))
-                    silent_time = is_silent(config, group)
+                if not match or logtime.group(0) != item[COLUMN_TIME]:
+                    continue
 
-                    if behavior == "ignore" and silent_time:
+                print(line)
+                item[COLUMN_TIME] = logtime.group(1)
+                group = re.sub(r"[-―]", "", match.group(1))
+                silent_time = is_silent(config, group)
+
+                if behavior == "ignore" and silent_time:
+                    break
+
+                if behavior == "volume_down" and silent_time:
+                    play_volume = volume
+                else:
+                    play_volume = 1.0
+
+                if enableCevio and len(item) == 4:
+                    talker.Volume = play_volume * 100
+                    if (
+                        len(talker.GetPhonemes(group)) != 0
+                        and len(talker.GetPhonemes(group))
+                        <= config["cevio"]["max_phonemes"]
+                    ):
+                        state = talker.Speak(group + item[COLUMN_MESSAGE])
+                        state.Wait()
                         break
 
-                    if behavior == "volume_down" and silent_time:
-                        play_volume = volume
-                    else:
-                        play_volume = 1.0
-
-                    if enableCevio and len(item) == 4:
-                        talker.Volume = play_volume * 100
-                        if (
-                            len(talker.GetPhonemes(group)) != 0
-                            and len(talker.GetPhonemes(group))
-                            <= config["cevio"]["max_phonemes"]
-                        ):
-                            state = talker.Speak(group + item[COLUMN_MESSAGE])
-                            state.Wait()
-                            break
-
-                    play(item[COLUMN_SOUND], play_volume)
-                    break
+                play(item[COLUMN_SOUND], play_volume)
+                break
