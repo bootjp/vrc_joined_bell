@@ -168,9 +168,7 @@ if __name__ == "__main__":
     start = datetime.datetime.strptime(
         config["silent"]["time"]["start"], "%H:%M:%S"
     ).time()
-    end = datetime.datetime.strptime(
-        config["silent"]["time"]["end"], "%H:%M:%S"
-    ).time()
+    end = datetime.datetime.strptime(config["silent"]["time"]["end"], "%H:%M:%S").time()
     behavior = config["silent"]["behavior"]
     volume = config["silent"]["volume"]
     print("sleep time behavior ", behavior, start, "-", end)
@@ -219,7 +217,7 @@ if __name__ == "__main__":
                 if match and logtime.group(1) != item[COLUMN_TIME]:
                     print(line)
                     item[COLUMN_TIME] = logtime.group(1)
-                    group = re.sub(r"[-―]", "", match.group(0))
+                    group = re.sub(r"[-―]", "", match.group(1))
                     silent_time = is_silent(config, group)
 
                     if behavior == "ignore" and silent_time:
