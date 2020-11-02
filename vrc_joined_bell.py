@@ -230,7 +230,7 @@ if __name__ == "__main__":
                     else:
                         play_volume = 1.0
 
-                    if enableCevio and len(item) == 4:
+                    if enableCevio and len(item) == 3:
                         talker.Volume = play_volume * 100
                         if (
                             len(talker.GetPhonemes(group)) != 0
