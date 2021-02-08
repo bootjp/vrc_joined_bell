@@ -34,6 +34,7 @@ jobs:
         architecture: x64
     - name: Install dependencies
       run: |
+        pip install py2exe
         python -m pip install -r requirements.txt
 
     - name: Generate version file
@@ -42,7 +43,8 @@ jobs:
 
     - name: Build as binary
       run: |
-        pyinstaller.exe vrc_joined_bell.py --version-file "version.txt" -F --hidden-import=clr
+        python setup.py py2exe
+#        pyinstaller.exe vrc_joined_bell.py --version-file "version.txt" -F --hidden-import=clr
 
     - name: Achive to zip
       run: |
