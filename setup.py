@@ -3,7 +3,7 @@ import py2exe
 
 option = {
     'bundle_files': 1,
-    'includes': ['tkinter', 'ctypes', 'pyyaml']
+    'includes': ['tkinter', 'ctypes', 'yaml']
 }
 
 setup(
