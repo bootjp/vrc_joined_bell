@@ -1,11 +1,14 @@
 import datetime
+import logging
 import time
 import glob
 import os
 import re
 import wave
+import psutil
 import yaml
-import freezegun
+import threading
+from flask import Flask
 
 # disable pygame version log
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
@@ -36,13 +39,14 @@ def is_silent_exclude_days_of_week(exclude_days_of_week):
     return datetime.datetime.now().strftime("%a") in exclude_days_of_week
 
 
-@freezegun.freeze_time("2020-11-01")
-def test_is_silent_exclude_days_of_week():
-    assert is_silent_exclude_days_of_week(["Sun"]) == True
-    assert is_silent_exclude_days_of_week(["Thu"]) == False
-
-
 def is_silent(config, group):
+    if (
+        "toggle_server" in config["silent"]
+        and config["silent"]["toggle_server"]
+        and enable_server_silent
+    ):
+        return True
+
     start = datetime.datetime.strptime(
         config["silent"]["time"]["start"], "%H:%M:%S"
     ).time()
@@ -51,58 +55,17 @@ def is_silent(config, group):
     if not is_silent_time(start, end):
         return False
 
-    if is_silent_exclude_event(config["silent"]["exclude"]["match_group"], group):
+    if "match_group" in config["silent"]["exclude"] and is_silent_exclude_event(
+        config["silent"]["exclude"]["match_group"], group
+    ):
         return False
 
-    if is_silent_exclude_days_of_week(config["silent"]["exclude"]["days_of_week"]):
+    if "days_of_week" in config["silent"]["exclude"] and is_silent_exclude_days_of_week(
+        config["silent"]["exclude"]["days_of_week"]
+    ):
         return False
 
     return True
-
-
-@freezegun.freeze_time("2020-11-01 01:00:00")
-def test_is_silent():
-    config = {
-        "silent": {
-            "time": {
-                "start": "00:00:00",
-                "end": "04:00:00",
-            },
-            "exclude": {
-                "days_of_week": ["Mon"],
-                "match_group": ["27Cobalter"],
-            },
-        }
-    }
-    assert is_silent(config, "bootjp／ぶーと") == True
-
-    config = {
-        "silent": {
-            "time": {
-                "start": "00:00:00",
-                "end": "04:00:00",
-            },
-            "exclude": {
-                "days_of_week": ["Sun"],
-                "match_group": ["27Cobalter"],
-            },
-        }
-    }
-    assert is_silent(config, "bootjp／ぶーと") == False
-
-    config = {
-        "silent": {
-            "time": {
-                "start": "00:00:00",
-                "end": "04:00:00",
-            },
-            "exclude": {
-                "days_of_week": ["Mon"],
-                "match_group": ["bootjp／ぶーと"],
-            },
-        }
-    }
-    assert is_silent(config, "bootjp／ぶーと") == False
 
 
 def is_silent_exclude_event(match_groups, group):
@@ -111,12 +74,6 @@ def is_silent_exclude_event(match_groups, group):
             return True
 
     return False
-
-
-@freezegun.freeze_time("2020-11-01")
-def test_is_silent_exclude_event():
-    assert is_silent_exclude_event(["27Cobalter"], "27Cobalter") == True
-    assert is_silent_exclude_event(["27Cobalter"], "bootjp／ぶーと") == False
 
 
 def is_silent_time(start, end):
@@ -129,15 +86,6 @@ def is_silent_time(start, end):
         return start <= now or now <= end
 
 
-@freezegun.freeze_time("2020-11-01 01:00:00")
-def test_is_silent_time():
-    start = datetime.datetime.strptime("00:00:00", "%H:%M:%S").time()
-    end = datetime.datetime.strptime("04:00:00", "%H:%M:%S").time()
-    assert is_silent_time(start, end) == True
-    start = datetime.datetime.strptime("02:00:00", "%H:%M:%S").time()
-    assert is_silent_time(start, end) == False
-
-
 def play(data_path, volume):
     with wave.open(data_path, "rb") as wave_file:
         frame_rate = wave_file.getframerate()
@@ -147,12 +95,44 @@ def play(data_path, volume):
     player.play()
 
 
+enable_server_silent = False
+
+
+def toggle_server(host, port):
+    srv = Flask(__name__)
+    log = logging.getLogger("werkzeug")
+    log.disabled = True
+    srv.logger.disabled = True
+
+    print("start toggle server")
+
+    @srv.route("/")
+    def handler():
+        global enable_server_silent
+        enable_server_silent = not enable_server_silent
+
+        print(f"silent mode status change to {enable_server_silent} ")
+
+        return f"STATUS {enable_server_silent}"
+
+    srv.run(host=host, port=port)
+
+
+def process_kill_by_name(name):
+    pid = os.getpid()
+    for p in psutil.process_iter(attrs=["pid", "name"]):
+        if p.info["name"] == name and p.pid != pid:
+            p.terminate()
+
+
 COLUMN_TIME = 0
 COLUMN_EVENT_PATTERN = 1
 COLUMN_SOUND = 2
 COLUMN_MESSAGE = 3
 
-if __name__ == "__main__":
+
+def main():
+    process_kill_by_name("vrc_joined_bell.exe")
     with open("notice.yml", "r") as conf:
         config = yaml.load(conf, Loader=yaml.SafeLoader)
 
@@ -164,6 +144,18 @@ if __name__ == "__main__":
         if "message" in notice:
             data[notice["event"]].append(notice["message"])
             print("        " + notice["message"])
+
+    if config["silent"]["toggle_server"]:
+        try:
+            thread = threading.Thread(
+                target=toggle_server,
+                args=(config["silent"]["host"], config["silent"]["port"]),
+            )
+            thread.start()
+        except:
+            import traceback
+
+            traceback.print_exc()
 
     start = datetime.datetime.strptime(
         config["silent"]["time"]["start"], "%H:%M:%S"
@@ -217,7 +209,9 @@ if __name__ == "__main__":
                 if match and logtime.group(1) != item[COLUMN_TIME]:
                     print(line)
                     item[COLUMN_TIME] = logtime.group(1)
-                    group = re.sub(r"[-―]", "", match.group(1))
+                    group = ""
+                    if len(match.groups()) > 0:
+                        group = match.group(1)
                     silent_time = is_silent(config, group)
 
                     if behavior == "ignore" and silent_time:
@@ -230,6 +224,7 @@ if __name__ == "__main__":
 
                     if enableCevio and len(item) == 3:
                         talker.Volume = play_volume * 100
+                        group = re.sub(r"[-―]", "", group)
                         if (
                             len(talker.GetPhonemes(group)) != 0
                             and len(talker.GetPhonemes(group))
@@ -241,3 +236,7 @@ if __name__ == "__main__":
 
                     play(item[COLUMN_SOUND], play_volume)
                     break
+
+
+if __name__ == "__main__":
+    main()

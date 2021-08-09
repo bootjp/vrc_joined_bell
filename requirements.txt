@@ -3,3 +3,5 @@ pygame
 pythonnet
 pytest
 freezegun
+flask
+psutil
