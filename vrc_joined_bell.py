@@ -207,15 +207,14 @@ def main():
     logfiles = glob.glob(vrcdir + "output_log_*.txt")
     logfiles.sort(key=os.path.getctime, reverse=True)
 
+    timereg = re.compile(
+        "([0-9]{4}\.[0-9]{2}\.[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) .*"
+    )
+
     with open(logfiles[0], "r", encoding="utf-8") as f:
         logger.info("open logfile : " + logfiles[0])
         loglines = tail(f)
-
-        timereg = re.compile(
-            "([0-9]{4}\.[0-9]{2}\.[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) .*"
-        )
-
-        terminatereg = re.compile(".*?VRCApplication: OnApplicationQuit at (.*)")
+        terminatereg = re.compile(".*?VRCApplication: OnApplicationQuit at .*")
 
         for line in loglines:
             logtime = timereg.match(line)
@@ -225,6 +224,7 @@ def main():
             if terminatereg.match(line):
                 logger.info(line)
                 return
+
             for pattern, item in data.items():
                 match = item[COLUMN_EVENT_PATTERN].match(line)
                 if match and logtime.group(1) != item[COLUMN_TIME]:
@@ -233,18 +233,11 @@ def main():
                     group = ""
                     if len(match.groups()) > 0:
                         group = match.group(1)
-                    silent_time = is_silent(config, group)
 
-                    if behavior == "ignore" and silent_time:
+                    if behavior == "ignore" and is_silent(config, group):
                         break
 
-                    if behavior == "volume_down" and silent_time:
-                        play_volume = volume
-                    else:
-                        play_volume = 1.0
-
                     if enableCevio and len(item) == 4:
-                        talker.Volume = play_volume * 100
                         group = re.sub(r"[-―]", "", group)
                         if (
                             len(talker.GetPhonemes(group)) != 0
@@ -255,7 +248,7 @@ def main():
                             state.Wait()
                             break
 
-                    play(item[COLUMN_SOUND], play_volume)
+                    play(item[COLUMN_SOUND], 100)
                     break
 
 
