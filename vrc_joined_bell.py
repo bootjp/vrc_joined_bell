@@ -38,10 +38,6 @@ def tail(thefile):
             time.sleep(0.5)
 
 
-def is_silent_exclude_days_of_week(exclude_days_of_week):
-    return datetime.datetime.now().strftime("%a") in exclude_days_of_week
-
-
 def is_silent(config, group):
     if (
         "toggle_server" in config["silent"]
@@ -60,11 +56,6 @@ def is_silent(config, group):
 
     if "match_group" in config["silent"]["exclude"] and is_silent_exclude_event(
         config["silent"]["exclude"]["match_group"], group
-    ):
-        return False
-
-    if "days_of_week" in config["silent"]["exclude"] and is_silent_exclude_days_of_week(
-        config["silent"]["exclude"]["days_of_week"]
     ):
         return False
 
@@ -177,7 +168,7 @@ def main():
         config["silent"]["time"]["start"], "%H:%M:%S"
     ).time()
     end = datetime.datetime.strptime(config["silent"]["time"]["end"], "%H:%M:%S").time()
-    logger.info("sleep time behavior {} {} {}".format(start, "-", end))
+    logger.info("sleep time {} {} {}".format(start, "-", end))
 
     enableCevio = False
     if "cevio" in config:

@@ -1,12 +1,7 @@
 silent:
-  volume: 0.05
   time:
     start: '00:00:00'
     end:   '06:00:00'
-  exclude:
-    days_of_week:
-      - "Sat"
-      - "Sun"
     match_group: # user
       - 27Cobalter
       - bootjpÅ^Ç‘Å[Ç∆
